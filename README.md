@@ -20,8 +20,8 @@ All three WooCommerce extensions must be active. If a dependency is unavailable,
 
 ### Installation
 
-1. Download or build a ZIP whose top-level plugin directory contains `aspen-membership-addon-rules.php` directly. Do not wrap the plugin in an additional parent directory.
-2. Upload that ZIP through **Plugins → Add New → Upload Plugin**, or copy the extracted directory into `wp-content/plugins/`.
+1. Prefer the release asset named `aspen-addon-manager.zip`. Developers can also generate it with the included build script.
+2. Upload the ZIP through **Plugins → Add New → Upload Plugin**, or copy its extracted directory into `wp-content/plugins/`. The ZIP must have exactly one top-level directory with `aspen-addon-manager.php` directly inside it; do not add another wrapper directory. A current GitHub source archive also follows this discoverable layout, although the release ZIP excludes repository-only files.
 3. Confirm WooCommerce, WooCommerce Subscriptions, and WooCommerce Memberships are installed and active.
 4. Activate **Aspen Membership Add-on Rules**.
 5. Open **WooCommerce → Membership Add-on Rules**.
@@ -105,7 +105,7 @@ The plugin uses consistently prefixed classes and has no build step or JavaScrip
 
 ```text
 aspen-addon-manager/
-├── aspen-membership-addon-rules.php
+├── aspen-addon-manager.php
 ├── README.md
 └── includes/
     ├── class-admin.php
@@ -116,7 +116,7 @@ aspen-addon-manager/
     └── class-rule-repository.php
 ```
 
-- `aspen-membership-addon-rules.php` defines plugin metadata and constants, loads the classes, and boots on `plugins_loaded`.
+- `aspen-addon-manager.php` defines plugin metadata and constants, loads the classes, and boots on `plugins_loaded`.
 - `Aspen_Membership_Addon_Rules_Plugin` verifies dependencies and wires services.
 - `Aspen_Membership_Addon_Rules_Repository` owns all reads and writes for the versioned option.
 - `Aspen_Membership_Addon_Rules_Eligibility` contains product matching, active-membership checks, access-product lookup, and OR-based eligibility.
@@ -194,7 +194,7 @@ If the option schema changes, increment its `version` and add an explicit migrat
 
 ### Development checks
 
-There is currently no build process. At minimum, lint every PHP file and check patch whitespace before committing:
+There is no compilation step or dependency installation. At minimum, lint every PHP file and check patch whitespace before committing:
 
 ```bash
 find . -path './.git' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -202,6 +202,25 @@ git diff --check
 ```
 
 Functional acceptance testing requires a WordPress staging installation with WooCommerce, WooCommerce Subscriptions, and WooCommerce Memberships. Both classic and block-based cart/checkout paths should be exercised because they use different validation hooks.
+
+### Building an installable ZIP
+
+The repository contains development files that should not be deployed as part of the plugin. Build the WordPress-ready archive from the repository root:
+
+```bash
+./bin/build-plugin-zip.sh
+```
+
+The command creates `build/aspen-addon-manager.zip`. Its archive layout is:
+
+```text
+aspen-addon-manager/
+├── aspen-addon-manager.php
+├── README.md
+└── includes/
+```
+
+Upload that generated ZIP in WordPress. The build directory is ignored by Git.
 
 ## Support boundaries
 
