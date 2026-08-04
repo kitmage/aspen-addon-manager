@@ -33,12 +33,12 @@ final class Aspen_Addon_Manager {
 	private function __construct() {
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'handle_settings_save' ) );
-		add_filter( 'woocommerce_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), 999, 2 );
-		add_filter( 'woocommerce_variation_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), 999, 2 );
-		add_filter( 'wc_memberships_user_can', array( $this, 'allow_qualified_memberships_purchase_capability' ), 999, 5 );
-		add_filter( 'wc_memberships_user_can_purchase', array( $this, 'allow_qualified_memberships_purchase_capability' ), 999, 5 );
+		add_filter( 'woocommerce_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), PHP_INT_MAX, 2 );
+		add_filter( 'woocommerce_variation_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), PHP_INT_MAX, 2 );
+		add_filter( 'wc_memberships_user_can', array( $this, 'allow_qualified_memberships_purchase_capability' ), PHP_INT_MAX, 5 );
+		add_filter( 'wc_memberships_user_can_purchase', array( $this, 'allow_qualified_memberships_purchase_capability' ), PHP_INT_MAX, 5 );
 		add_action( 'woocommerce_before_single_product', array( $this, 'prepare_single_product_add_to_cart' ), 1 );
-		add_filter( 'woocommerce_add_to_cart_validation', array( $this, 'validate_add_to_cart' ), 999, 3 );
+		add_filter( 'woocommerce_add_to_cart_validation', array( $this, 'validate_add_to_cart' ), PHP_INT_MAX, 3 );
 		add_action( 'woocommerce_check_cart_items', array( $this, 'validate_cart_items' ), 20 );
 		add_action( 'woocommerce_single_product_summary', array( $this, 'maybe_render_add_to_cart' ), 35 );
 		add_filter( 'the_content', array( $this, 'append_restriction_message' ), 20 );
@@ -183,9 +183,20 @@ final class Aspen_Addon_Manager {
 	public function maybe_render_add_to_cart() {
 		global $product;
 
-		if ( is_a( $product, 'WC_Product' ) && $this->is_eligible_for_cart_based_access( $product ) ) {
-			woocommerce_template_single_add_to_cart();
+		if ( ! is_a( $product, 'WC_Product' ) || ! $this->is_eligible_for_cart_based_access( $product ) ) {
+			return;
 		}
+
+		ob_start();
+		woocommerce_template_single_add_to_cart();
+		$template_output = ob_get_clean();
+
+		if ( trim( $template_output ) ) {
+			echo $template_output; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WooCommerce template output is escaped by the template.
+			return;
+		}
+
+		$this->render_simple_add_to_cart_fallback( $product );
 	}
 
 	public function append_restriction_message( $content ) {
@@ -201,6 +212,34 @@ final class Aspen_Addon_Manager {
 		return $content;
 	}
 
+
+
+	private function render_simple_add_to_cart_fallback( $product ) {
+		if ( ! $product->is_type( 'simple' ) || ! $product->is_in_stock() ) {
+			return;
+		}
+
+		echo '<form class="cart" action="' . esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ) . '" method="post" enctype="multipart/form-data">';
+
+		do_action( 'woocommerce_before_add_to_cart_button' );
+		do_action( 'woocommerce_before_add_to_cart_quantity' );
+
+		woocommerce_quantity_input(
+			array(
+				'min_value'   => apply_filters( 'woocommerce_quantity_input_min', $product->get_min_purchase_quantity(), $product ),
+				'max_value'   => apply_filters( 'woocommerce_quantity_input_max', $product->get_max_purchase_quantity(), $product ),
+				'input_value' => $product->get_min_purchase_quantity(),
+			)
+		);
+
+		do_action( 'woocommerce_after_add_to_cart_quantity' );
+
+		echo '<button type="submit" name="add-to-cart" value="' . esc_attr( $product->get_id() ) . '" class="single_add_to_cart_button button alt">' . esc_html( $product->single_add_to_cart_text() ) . '</button>';
+
+		do_action( 'woocommerce_after_add_to_cart_button' );
+
+		echo '</form>';
+	}
 
 	private function get_memberships_capability_product_id( $action, $target ) {
 		if ( 'purchase' !== $action && ! ( is_array( $target ) && isset( $target['product'] ) ) ) {
