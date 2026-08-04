@@ -24,7 +24,7 @@ All three WooCommerce extensions must be active. If a dependency is unavailable,
 2. Upload the ZIP through **Plugins → Add New → Upload Plugin**, or copy its extracted directory into `wp-content/plugins/`. The ZIP must have exactly one top-level directory with `aspen-addon-manager.php` directly inside it; do not add another wrapper directory. A current GitHub source archive also follows this discoverable layout, although the release ZIP excludes repository-only files.
 3. Confirm WooCommerce, WooCommerce Subscriptions, and WooCommerce Memberships are installed and active.
 4. Activate **Aspen Membership Add-on Rules**.
-5. Open **WooCommerce → Membership Add-on Rules**.
+5. Open **Settings → Membership Add-on Rules**.
 
 ### Before creating a rule
 
@@ -37,7 +37,7 @@ The last step is important. This plugin must own the add-on purchase restriction
 
 ### Creating a rule
 
-1. Go to **WooCommerce → Membership Add-on Rules**.
+1. Go to **Settings → Membership Add-on Rules**.
 2. Enter an administrator-facing **Rule name**.
 3. Select whether the rule is **Enabled**.
 4. Select a published **Membership plan**.
@@ -178,7 +178,7 @@ Store API validation throws `Automattic\WooCommerce\StoreApi\Exceptions\RouteExc
 
 ### Security and compatibility
 
-- Page access and every mutation require `manage_woocommerce`.
+- Page access and every mutation require `manage_options`, matching the capability required to access the WordPress Settings menu.
 - Create, update, delete, enable, and disable requests require WordPress nonces.
 - Input is sanitized before storage and rendered values are escaped.
 - Product, taxonomy, membership, and cart operations use WordPress and WooCommerce APIs; there are no direct database or order-table queries.
