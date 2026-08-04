@@ -10,14 +10,16 @@ class Aspen_Membership_Addon_Rules_Admin {
 		add_action( 'admin_post_aspen_membership_addon_rule_save', array( $this, 'save' ) );
 		add_action( 'admin_post_aspen_membership_addon_rule_action', array( $this, 'row_action' ) );
 	}
-	public function menu() { add_submenu_page( 'woocommerce', __( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ), __( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ), 'manage_woocommerce', 'aspen-membership-addon-rules', array( $this, 'render' ) ); }
+	public function menu() { add_options_page( __( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ), __( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ), 'manage_options', 'aspen-membership-addon-rules', array( $this, 'render' ) ); }
+	private function dependencies_available() { return class_exists( 'WooCommerce' ) && function_exists( 'wc_memberships_get_membership_plan' ) && ( class_exists( 'WC_Subscriptions' ) || function_exists( 'wcs_get_subscriptions' ) ); }
 	private function authorize( $action ) {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) { wp_die( esc_html__( 'You are not allowed to manage these rules.', 'aspen-membership-addon-rules' ), 403 ); }
+		if ( ! current_user_can( 'manage_options' ) ) { wp_die( esc_html__( 'You are not allowed to manage these rules.', 'aspen-membership-addon-rules' ), 403 ); }
 		check_admin_referer( $action );
 	}
-	private function redirect( $message, $error = false ) { wp_safe_redirect( add_query_arg( array( 'page' => 'aspen-membership-addon-rules', $error ? 'amar_error' : 'amar_success' => rawurlencode( $message ) ), admin_url( 'admin.php' ) ) ); exit; }
+	private function redirect( $message, $error = false ) { wp_safe_redirect( add_query_arg( array( 'page' => 'aspen-membership-addon-rules', $error ? 'amar_error' : 'amar_success' => rawurlencode( $message ) ), admin_url( 'options-general.php' ) ) ); exit; }
 	public function save() {
 		$this->authorize( 'amar_save_rule' );
+		if ( ! $this->dependencies_available() ) { $this->redirect( __( 'The required WooCommerce extensions must be active before rules can be saved.', 'aspen-membership-addon-rules' ), true ); }
 		$id = isset( $_POST['id'] ) ? sanitize_key( wp_unslash( $_POST['id'] ) ) : '';
 		$rule = array(
 			'id' => $id ?: wp_generate_uuid4(),
@@ -50,7 +52,11 @@ class Aspen_Membership_Addon_Rules_Admin {
 		$this->redirect( __( 'Invalid action.', 'aspen-membership-addon-rules' ), true );
 	}
 	public function render() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) { wp_die( esc_html__( 'You are not allowed to manage these rules.', 'aspen-membership-addon-rules' ), 403 ); }
+		if ( ! current_user_can( 'manage_options' ) ) { wp_die( esc_html__( 'You are not allowed to manage these rules.', 'aspen-membership-addon-rules' ), 403 ); }
+		if ( ! $this->dependencies_available() ) {
+			echo '<div class="wrap"><h1>' . esc_html__( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ) . '</h1><div class="notice notice-error"><p>' . esc_html__( 'WooCommerce, WooCommerce Subscriptions, and WooCommerce Memberships must be active before rules can be managed.', 'aspen-membership-addon-rules' ) . '</p></div></div>';
+			return;
+		}
 		$editing = isset( $_GET['edit'] ) ? $this->repository->find( sanitize_key( wp_unslash( $_GET['edit'] ) ) ) : null;
 		$rule = $editing ?: array( 'id' => '', 'name' => '', 'enabled' => true, 'membership_plan_id' => 0, 'product_tag_term_id' => 0, 'restriction_message' => '' );
 		$plans = get_posts( array( 'post_type' => 'wc_membership_plan', 'post_status' => 'publish', 'numberposts' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
@@ -72,7 +78,7 @@ class Aspen_Membership_Addon_Rules_Admin {
 			$base = array( 'action' => 'aspen_membership_addon_rule_action', 'id' => $item['id'], '_wpnonce' => wp_create_nonce( 'amar_rule_action' ) );
 			$toggle = add_query_arg( $base + array( 'operation' => empty( $item['enabled'] ) ? 'enable' : 'disable' ), admin_url( 'admin-post.php' ) );
 			$delete = add_query_arg( $base + array( 'operation' => 'delete' ), admin_url( 'admin-post.php' ) );
-			$edit = add_query_arg( array( 'page' => 'aspen-membership-addon-rules', 'edit' => $item['id'] ), admin_url( 'admin.php' ) );
+			$edit = add_query_arg( array( 'page' => 'aspen-membership-addon-rules', 'edit' => $item['id'] ), admin_url( 'options-general.php' ) );
 			echo '<tr><td><strong>' . esc_html( $item['name'] ) . '</strong></td><td>' . esc_html( ! empty( $item['enabled'] ) ? __( 'Enabled', 'aspen-membership-addon-rules' ) : __( 'Disabled', 'aspen-membership-addon-rules' ) ) . '</td><td>' . esc_html( $plan ? $plan->get_name() : '#' . absint( $item['membership_plan_id'] ) ) . '</td><td>' . esc_html( ( $tag && ! is_wp_error( $tag ) ? $tag->name : '#' . absint( $item['product_tag_term_id'] ) ) . ' (' . $count . ')' ) . '</td><td>' . ( $warnings ? esc_html( implode( ' ', $warnings ) ) : esc_html__( 'OK', 'aspen-membership-addon-rules' ) ) . '</td><td><a href="' . esc_url( $edit ) . '">' . esc_html__( 'Edit', 'aspen-membership-addon-rules' ) . '</a> | <a href="' . esc_url( $toggle ) . '">' . esc_html( empty( $item['enabled'] ) ? __( 'Enable', 'aspen-membership-addon-rules' ) : __( 'Disable', 'aspen-membership-addon-rules' ) ) . '</a> | <a href="' . esc_url( $delete ) . '" onclick="return confirm(\'' . esc_js( __( 'Delete this rule?', 'aspen-membership-addon-rules' ) ) . '\')">' . esc_html__( 'Delete', 'aspen-membership-addon-rules' ) . '</a></td></tr>';
 		}
 		if ( ! $this->repository->all() ) { echo '<tr><td colspan="6">' . esc_html__( 'No rules configured.', 'aspen-membership-addon-rules' ) . '</td></tr>'; }
