@@ -37,6 +37,7 @@ final class Aspen_Addon_Manager {
 		add_filter( 'woocommerce_variation_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), 999, 2 );
 		add_filter( 'wc_memberships_user_can', array( $this, 'allow_qualified_memberships_purchase_capability' ), 999, 5 );
 		add_filter( 'wc_memberships_user_can_purchase', array( $this, 'allow_qualified_memberships_purchase_capability' ), 999, 5 );
+		add_action( 'woocommerce_before_single_product', array( $this, 'prepare_single_product_add_to_cart' ), 1 );
 		add_filter( 'woocommerce_add_to_cart_validation', array( $this, 'validate_add_to_cart' ), 999, 3 );
 		add_action( 'woocommerce_check_cart_items', array( $this, 'validate_cart_items' ), 20 );
 		add_action( 'woocommerce_single_product_summary', array( $this, 'maybe_render_add_to_cart' ), 35 );
@@ -170,9 +171,19 @@ final class Aspen_Addon_Manager {
 		}
 	}
 
+
+	public function prepare_single_product_add_to_cart() {
+		global $product;
+
+		if ( is_a( $product, 'WC_Product' ) && $this->is_eligible_for_cart_based_access( $product ) ) {
+			remove_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30 );
+		}
+	}
+
 	public function maybe_render_add_to_cart() {
 		global $product;
-		if ( $this->is_eligible_for_cart_based_access( $product ) && ! has_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart' ) ) {
+
+		if ( is_a( $product, 'WC_Product' ) && $this->is_eligible_for_cart_based_access( $product ) ) {
 			woocommerce_template_single_add_to_cart();
 		}
 	}
