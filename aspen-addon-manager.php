@@ -36,6 +36,8 @@ final class Aspen_Addon_Manager {
 		add_action( 'admin_init', array( $this, 'handle_settings_save' ) );
 		add_filter( 'woocommerce_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), PHP_INT_MAX, 2 );
 		add_filter( 'woocommerce_variation_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), PHP_INT_MAX, 2 );
+		add_filter( 'woocommerce_subscription_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), PHP_INT_MAX, 2 );
+		add_filter( 'woocommerce_subscription_variation_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), PHP_INT_MAX, 2 );
 		add_filter( 'wc_memberships_user_can', array( $this, 'allow_qualified_memberships_purchase_capability' ), PHP_INT_MAX, 5 );
 		add_filter( 'wc_memberships_user_can_purchase', array( $this, 'allow_qualified_memberships_purchase_capability' ), PHP_INT_MAX, 5 );
 		add_action( 'woocommerce_before_single_product', array( $this, 'prepare_single_product_add_to_cart' ), 1 );
@@ -132,7 +134,20 @@ final class Aspen_Addon_Manager {
 	}
 
 	public function allow_qualified_restricted_purchase( $is_purchasable, $product ) {
-		return $this->is_eligible_for_cart_based_access( $product ) ? true : $is_purchasable;
+		$is_eligible = $this->is_eligible_for_cart_based_access( $product );
+
+		$this->debug_log(
+			'Purchasable filter checked.',
+			array(
+				'product_id'       => is_a( $product, 'WC_Product' ) ? $product->get_id() : absint( $product ),
+				'product_type'     => is_a( $product, 'WC_Product' ) ? $product->get_type() : '',
+				'incoming_value'   => $is_purchasable,
+				'eligible'         => $is_eligible,
+				'filtered_value'   => $is_eligible ? true : $is_purchasable,
+			)
+		);
+
+		return $is_eligible ? true : $is_purchasable;
 	}
 
 
@@ -155,6 +170,7 @@ final class Aspen_Addon_Manager {
 	}
 
 	public function validate_add_to_cart( $passed, $product_id, $quantity ) {
+		$this->debug_log( 'Add-to-cart validation checked.', array( 'product_id' => absint( $product_id ), 'passed_in' => $passed, 'eligible' => $this->is_eligible_for_cart_based_access( $product_id ) ) );
 		if ( $passed && $this->is_memberships_purchase_restricted( $product_id ) && $this->product_has_matching_rule( $product_id ) && ! $this->is_eligible_for_cart_based_access( $product_id ) ) {
 			wc_add_notice( wp_kses_post( $this->get_message_for_product( $product_id ) ), 'error' );
 			return false;
