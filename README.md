@@ -20,10 +20,11 @@ All three WooCommerce extensions must be active. If a dependency is unavailable,
 
 ### Installation
 
-1. Copy the `aspen-membership-addon-rules` directory into `wp-content/plugins/`, or package the directory as a ZIP and upload it through **Plugins → Add New → Upload Plugin**.
-2. Confirm WooCommerce, WooCommerce Subscriptions, and WooCommerce Memberships are installed and active.
-3. Activate **Aspen Membership Add-on Rules**.
-4. Open **WooCommerce → Membership Add-on Rules**.
+1. Download or build a ZIP whose top-level plugin directory contains `aspen-membership-addon-rules.php` directly. Do not wrap the plugin in an additional parent directory.
+2. Upload that ZIP through **Plugins → Add New → Upload Plugin**, or copy the extracted directory into `wp-content/plugins/`.
+3. Confirm WooCommerce, WooCommerce Subscriptions, and WooCommerce Memberships are installed and active.
+4. Activate **Aspen Membership Add-on Rules**.
+5. Open **WooCommerce → Membership Add-on Rules**.
 
 ### Before creating a rule
 
@@ -103,8 +104,9 @@ Before production deployment, test:
 The plugin uses consistently prefixed classes and has no build step or JavaScript dependency:
 
 ```text
-aspen-membership-addon-rules/
+aspen-addon-manager/
 ├── aspen-membership-addon-rules.php
+├── README.md
 └── includes/
     ├── class-admin.php
     ├── class-eligibility.php
@@ -195,7 +197,7 @@ If the option schema changes, increment its `version` and add an explicit migrat
 There is currently no build process. At minimum, lint every PHP file and check patch whitespace before committing:
 
 ```bash
-find aspen-membership-addon-rules -name '*.php' -print0 | xargs -0 -n1 php -l
+find . -path './.git' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
 git diff --check
 ```
 
