@@ -35,6 +35,8 @@ final class Aspen_Addon_Manager {
 		add_action( 'admin_init', array( $this, 'handle_settings_save' ) );
 		add_filter( 'woocommerce_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), 999, 2 );
 		add_filter( 'woocommerce_variation_is_purchasable', array( $this, 'allow_qualified_restricted_purchase' ), 999, 2 );
+		add_filter( 'wc_memberships_user_can', array( $this, 'allow_qualified_memberships_purchase_capability' ), 999, 5 );
+		add_filter( 'wc_memberships_user_can_purchase', array( $this, 'allow_qualified_memberships_purchase_capability' ), 999, 5 );
 		add_filter( 'woocommerce_add_to_cart_validation', array( $this, 'validate_add_to_cart' ), 999, 3 );
 		add_action( 'woocommerce_check_cart_items', array( $this, 'validate_cart_items' ), 20 );
 		add_action( 'woocommerce_single_product_summary', array( $this, 'maybe_render_add_to_cart' ), 35 );
@@ -127,6 +129,25 @@ final class Aspen_Addon_Manager {
 		return $this->is_eligible_for_cart_based_access( $product ) ? true : $is_purchasable;
 	}
 
+
+	public function allow_qualified_memberships_purchase_capability( $user_can, $user_id = 0, $action = '', $target = array(), $when = '' ) {
+		if ( false !== $user_can ) {
+			return $user_can;
+		}
+
+		if ( is_array( $action ) && ! is_array( $target ) ) {
+			$target = $action;
+			$action = 'purchase';
+		}
+
+		$product_id = $this->get_memberships_capability_product_id( $action, $target );
+		if ( $product_id && $this->is_eligible_for_cart_based_access( $product_id ) ) {
+			return true;
+		}
+
+		return $user_can;
+	}
+
 	public function validate_add_to_cart( $passed, $product_id, $quantity ) {
 		if ( $passed && $this->is_memberships_purchase_restricted( $product_id ) && $this->product_has_matching_rule( $product_id ) && ! $this->is_eligible_for_cart_based_access( $product_id ) ) {
 			wc_add_notice( wp_kses_post( $this->get_message_for_product( $product_id ) ), 'error' );
@@ -167,6 +188,25 @@ final class Aspen_Addon_Manager {
 		}
 
 		return $content;
+	}
+
+
+	private function get_memberships_capability_product_id( $action, $target ) {
+		if ( 'purchase' !== $action && ! ( is_array( $target ) && isset( $target['product'] ) ) ) {
+			return 0;
+		}
+
+		if ( is_array( $target ) ) {
+			if ( ! empty( $target['product'] ) ) {
+				return absint( $target['product'] );
+			}
+
+			if ( ! empty( $target['post'] ) && 'purchase' === $action ) {
+				return absint( $target['post'] );
+			}
+		}
+
+		return 0;
 	}
 
 	private function is_eligible_for_cart_based_access( $product ) {
