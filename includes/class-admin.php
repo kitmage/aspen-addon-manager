@@ -10,9 +10,9 @@ class Aspen_Membership_Addon_Rules_Admin {
 		add_action( 'admin_post_aspen_membership_addon_rule_save', array( $this, 'save' ) );
 		add_action( 'admin_post_aspen_membership_addon_rule_action', array( $this, 'row_action' ) );
 	}
-	public function menu() { add_submenu_page( 'options-general.php', __( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ), __( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ), 'manage_woocommerce', 'aspen-membership-addon-rules', array( $this, 'render' ) ); }
+	public function menu() { add_options_page( __( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ), __( 'Membership Add-on Rules', 'aspen-membership-addon-rules' ), 'manage_options', 'aspen-membership-addon-rules', array( $this, 'render' ) ); }
 	private function authorize( $action ) {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) { wp_die( esc_html__( 'You are not allowed to manage these rules.', 'aspen-membership-addon-rules' ), 403 ); }
+		if ( ! current_user_can( 'manage_options' ) ) { wp_die( esc_html__( 'You are not allowed to manage these rules.', 'aspen-membership-addon-rules' ), 403 ); }
 		check_admin_referer( $action );
 	}
 	private function redirect( $message, $error = false ) { wp_safe_redirect( add_query_arg( array( 'page' => 'aspen-membership-addon-rules', $error ? 'amar_error' : 'amar_success' => rawurlencode( $message ) ), admin_url( 'options-general.php' ) ) ); exit; }
@@ -50,7 +50,7 @@ class Aspen_Membership_Addon_Rules_Admin {
 		$this->redirect( __( 'Invalid action.', 'aspen-membership-addon-rules' ), true );
 	}
 	public function render() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) { wp_die( esc_html__( 'You are not allowed to manage these rules.', 'aspen-membership-addon-rules' ), 403 ); }
+		if ( ! current_user_can( 'manage_options' ) ) { wp_die( esc_html__( 'You are not allowed to manage these rules.', 'aspen-membership-addon-rules' ), 403 ); }
 		$editing = isset( $_GET['edit'] ) ? $this->repository->find( sanitize_key( wp_unslash( $_GET['edit'] ) ) ) : null;
 		$rule = $editing ?: array( 'id' => '', 'name' => '', 'enabled' => true, 'membership_plan_id' => 0, 'product_tag_term_id' => 0, 'restriction_message' => '' );
 		$plans = get_posts( array( 'post_type' => 'wc_membership_plan', 'post_status' => 'publish', 'numberposts' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );

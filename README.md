@@ -178,7 +178,7 @@ Store API validation throws `Automattic\WooCommerce\StoreApi\Exceptions\RouteExc
 
 ### Security and compatibility
 
-- Page access and every mutation require `manage_woocommerce`.
+- Page access and every mutation require `manage_options`, matching the capability required to access the WordPress Settings menu.
 - Create, update, delete, enable, and disable requests require WordPress nonces.
 - Input is sanitized before storage and rendered values are escaped.
 - Product, taxonomy, membership, and cart operations use WordPress and WooCommerce APIs; there are no direct database or order-table queries.
