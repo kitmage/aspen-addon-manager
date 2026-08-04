@@ -14,7 +14,7 @@ The plugin does not grant memberships or maintain its own list of qualifying sub
 - WooCommerce Subscriptions.
 - WooCommerce Memberships.
 
-All three WooCommerce extensions must be active. If a dependency is unavailable, the rule engine does not start and administrators with the `manage_woocommerce` capability see an error notice instead of a fatal error.
+All three WooCommerce extensions must be active. If a dependency is unavailable, the rule engine does not start, administrators see an error notice instead of a fatal error, and the Settings page remains available to explain why rules cannot be managed.
 
 ## User guide
 

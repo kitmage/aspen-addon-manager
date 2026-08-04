@@ -15,14 +15,14 @@ final class Aspen_Membership_Addon_Rules_Plugin {
 		load_plugin_textdomain( 'aspen-membership-addon-rules', false, dirname( plugin_basename( AMAR_FILE ) ) . '/languages' );
 		$notices = new Aspen_Membership_Addon_Rules_Notices();
 		$notices->register();
+		$repository = new Aspen_Membership_Addon_Rules_Repository();
+		$eligibility = new Aspen_Membership_Addon_Rules_Eligibility( $repository );
+		( new Aspen_Membership_Addon_Rules_Admin( $repository, $eligibility ) )->register();
 
 		if ( ! $this->dependencies_available() ) {
 			return;
 		}
 
-		$repository = new Aspen_Membership_Addon_Rules_Repository();
-		$eligibility = new Aspen_Membership_Addon_Rules_Eligibility( $repository );
-		( new Aspen_Membership_Addon_Rules_Admin( $repository, $eligibility ) )->register();
 		( new Aspen_Membership_Addon_Rules_Purchase_Restrictions( $eligibility ) )->register();
 	}
 
