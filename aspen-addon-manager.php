@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aspen Add-on Manager
  * Description: Allows WooCommerce Memberships restricted add-on products to be purchased when a matching membership product is already in the cart.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Aspen Grove
  * Requires Plugins: woocommerce
  * Text Domain: aspen-addon-manager
@@ -326,7 +326,17 @@ final class Aspen_Addon_Manager {
 	}
 
 	private function is_memberships_purchase_restricted( $product_id ) {
-		return function_exists( 'wc_memberships_is_product_purchasing_restricted' ) && wc_memberships_is_product_purchasing_restricted( $product_id );
+		if ( ! function_exists( 'wc_memberships_is_product_purchasing_restricted' ) ) {
+			return false;
+		}
+
+		foreach ( $this->get_product_and_parent_ids( $product_id ) as $candidate_id ) {
+			if ( wc_memberships_is_product_purchasing_restricted( $candidate_id ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private function product_has_matching_rule( $product_id ) {
@@ -372,12 +382,36 @@ final class Aspen_Addon_Manager {
 	private function get_matching_rules( $product_id ) {
 		$matches = array();
 		foreach ( $this->get_rules() as $rule ) {
-			if ( has_term( $rule['tag_id'], 'product_tag', $product_id ) ) {
-				$matches[] = $rule;
+			foreach ( $this->get_product_and_parent_ids( $product_id ) as $candidate_id ) {
+				if ( has_term( $rule['tag_id'], 'product_tag', $candidate_id ) ) {
+					$matches[] = $rule;
+					break;
+				}
 			}
 		}
 
 		return $matches;
+	}
+
+	/**
+	 * Gets the product ID and, for a variation, its parent product ID.
+	 *
+	 * Product tags and purchase restrictions are normally assigned to the
+	 * variable parent rather than to each individual variation.
+	 *
+	 * @param int $product_id Product or variation ID.
+	 * @return int[]
+	 */
+	private function get_product_and_parent_ids( $product_id ) {
+		$product_id = absint( $product_id );
+		$ids        = $product_id ? array( $product_id ) : array();
+		$product    = $product_id && function_exists( 'wc_get_product' ) ? wc_get_product( $product_id ) : false;
+
+		if ( is_a( $product, 'WC_Product_Variation' ) && $product->get_parent_id() ) {
+			$ids[] = $product->get_parent_id();
+		}
+
+		return array_values( array_unique( array_map( 'absint', $ids ) ) );
 	}
 
 
