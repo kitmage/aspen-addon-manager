@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aspen Add-on Manager
  * Description: Allows WooCommerce Memberships restricted add-on products to be purchased when a matching membership product is already in the cart.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Aspen Grove
  * Requires Plugins: woocommerce
  * Text Domain: aspen-addon-manager
@@ -41,8 +41,6 @@ final class Aspen_Addon_Manager {
 		add_filter( 'wc_memberships_user_can', array( $this, 'allow_qualified_memberships_purchase_capability' ), PHP_INT_MAX, 5 );
 		add_filter( 'wc_memberships_user_can_purchase', array( $this, 'allow_qualified_memberships_purchase_capability' ), PHP_INT_MAX, 5 );
 		add_action( 'woocommerce_before_single_product', array( $this, 'prepare_single_product_add_to_cart' ), 1 );
-		add_filter( 'woocommerce_add_to_cart_validation', array( $this, 'validate_add_to_cart' ), PHP_INT_MAX, 3 );
-		add_action( 'woocommerce_check_cart_items', array( $this, 'validate_cart_items' ), 20 );
 		add_action( 'woocommerce_single_product_summary', array( $this, 'maybe_render_add_to_cart' ), 35 );
 		add_filter( 'the_content', array( $this, 'append_restriction_message' ), 20 );
 		add_filter( 'elementor/widget/render_content', array( $this, 'render_elementor_add_to_cart_fallback' ), 20, 2 );
@@ -169,30 +167,6 @@ final class Aspen_Addon_Manager {
 		return $user_can;
 	}
 
-	public function validate_add_to_cart( $passed, $product_id, $quantity ) {
-		$this->debug_log( 'Add-to-cart validation checked.', array( 'product_id' => absint( $product_id ), 'passed_in' => $passed, 'eligible' => $this->is_eligible_for_cart_based_access( $product_id ) ) );
-		if ( $passed && $this->is_memberships_purchase_restricted( $product_id ) && $this->product_has_matching_rule( $product_id ) && ! $this->is_eligible_for_cart_based_access( $product_id ) ) {
-			wc_add_notice( wp_kses_post( $this->get_message_for_product( $product_id ) ), 'error' );
-			return false;
-		}
-
-		return $passed;
-	}
-
-	public function validate_cart_items() {
-		if ( ! WC()->cart ) {
-			return;
-		}
-
-		foreach ( WC()->cart->get_cart() as $cart_item ) {
-			$product_id = $this->get_cart_item_product_id( $cart_item );
-			if ( $this->is_memberships_purchase_restricted( $product_id ) && $this->product_has_matching_rule( $product_id ) && ! $this->is_eligible_for_cart_based_access( $product_id ) ) {
-				wc_add_notice( wp_kses_post( $this->get_message_for_product( $product_id ) ), 'error' );
-			}
-		}
-	}
-
-
 	public function prepare_single_product_add_to_cart() {
 		global $product;
 
@@ -249,7 +223,7 @@ final class Aspen_Addon_Manager {
 		}
 
 		$product_id = get_the_ID();
-		if ( $this->is_memberships_purchase_restricted( $product_id ) && $this->product_has_matching_rule( $product_id ) && ! $this->is_eligible_for_cart_based_access( $product_id ) ) {
+		if ( $this->is_memberships_purchase_restricted( $product_id ) && $this->product_has_matching_rule( $product_id ) && ! $this->memberships_allows_purchase( $product_id ) ) {
 			$content .= '<div class="aspen-addon-manager-restriction-message">' . wp_kses_post( $this->get_message_for_product( $product_id ) ) . '</div>';
 		}
 
@@ -337,6 +311,18 @@ final class Aspen_Addon_Manager {
 		}
 
 		return false;
+	}
+
+	private function memberships_allows_purchase( $product_id ) {
+		if ( ! function_exists( 'wc_memberships_user_can' ) ) {
+			return false;
+		}
+
+		return (bool) wc_memberships_user_can(
+			get_current_user_id(),
+			'purchase',
+			array( 'product' => absint( $product_id ) )
+		);
 	}
 
 	private function product_has_matching_rule( $product_id ) {
