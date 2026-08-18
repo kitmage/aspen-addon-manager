@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Aspen Add-on Manager
  * Description: Allows WooCommerce Memberships restricted add-on products to be purchased when a matching membership product is already in the cart.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Aspen Grove
  * Requires Plugins: woocommerce
  * Text Domain: aspen-addon-manager
@@ -223,7 +223,9 @@ final class Aspen_Addon_Manager {
 		}
 
 		$product_id = get_the_ID();
-		if ( $this->is_memberships_purchase_restricted( $product_id ) && $this->product_has_matching_rule( $product_id ) && ! $this->memberships_allows_purchase( $product_id ) ) {
+		$is_eligible = $this->is_eligible_for_cart_based_access( $product_id );
+
+		if ( $this->is_memberships_purchase_restricted( $product_id ) && $this->product_has_matching_rule( $product_id ) && ! $is_eligible && ! $this->memberships_allows_purchase( $product_id ) ) {
 			$content .= '<div class="aspen-addon-manager-restriction-message">' . wp_kses_post( $this->get_message_for_product( $product_id ) ) . '</div>';
 		}
 
